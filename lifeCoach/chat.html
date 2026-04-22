@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Life Coach AI - 对话页面</title>
+    <style>
+        /* 全局样式 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+            line-height: 1.6;
+        }
+        
+        /* 容器样式 */
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        /* 头部样式 */
+        .header {
+            background-color: #3498db;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        .header h1 {
+            font-size: 1.5rem;
+        }
+        
+        /* 对话区域样式 */
+        .chat-area {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background-color: #f9f9f9;
+        }
+        
+        /* 消息样式 */
+        .message {
+            margin-bottom: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .user-message {
+            align-items: flex-end;
+        }
+        
+        .ai-message {
+            align-items: flex-start;
+        }
+        
+        .message-content {
+            max-width: 70%;
+            padding: 15px;
+            border-radius: 18px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        
+        .user-message .message-content {
+            background-color: #3498db;
+            color: white;
+            border-bottom-right-radius: 5px;
+        }
+        
+        .ai-message .message-content {
+            background-color: white;
+            color: #333;
+            border-bottom-left-radius: 5px;
+        }
+        
+        .message-time {
+            font-size: 0.8rem;
+            color: #7f8c8d;
+            margin-top: 5px;
+        }
+        
+        /* 输入区域样式 */
+        .input-area {
+            padding: 20px;
+            background-color: white;
+            border-top: 1px solid #e0e0e0;
+            display: flex;
+            align-items: center;
+        }
+        
+        .input-box {
+            flex: 1;
+            padding: 15px;
+            border: 1px solid #e0e0e0;
+            border-radius: 25px;
+            font-size: 1rem;
+            resize: none;
+            outline: none;
+        }
+        
+        .input-box:focus {
+            border-color: #3498db;
+        }
+        
+        .send-btn {
+            margin-left: 10px;
+            padding: 10px 20px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .send-btn:hover {
+            background-color: #2980b9;
+        }
+        
+        .send-btn:disabled {
+            background-color: #bdc3c7;
+            cursor: not-allowed;
+        }
+        
+        /* 加载动画 */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .message-content {
+                max-width: 85%;
+            }
+            
+            .input-area {
+                padding: 10px;
+            }
+            
+            .input-box {
+                padding: 10px;
+            }
+            
+            .send-btn {
+                padding: 8px 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Life Coach AI - 对话</h1>
+        </div>
+        
+        <div class="chat-area" id="chatArea">
+            <!-- 系统消息 -->
+            <div class="message ai-message">
+                <div class="message-content">
+                    <p>你好！我是你的AI人生教练。无论你面临什么问题或挑战，我都在这里为你提供支持和建议。请告诉我你现在的情况，我会尽力帮助你。</p>
+                </div>
+                <div class="message-time">系统</div>
+            </div>
+        </div>
+        
+        <div class="input-area">
+            <textarea class="input-box" id="inputBox" placeholder="请输入你的问题或分享你的情况..." rows="1"></textarea>
+            <button class="send-btn" id="sendBtn">发送</button>
+        </div>
+    </div>
+    
+    <script>
+        // API配置
+        const API_URL = 'https://ark.cn-beijing.volces.com/api/v3/chat/completions';
+        const API_KEY = '19956327-738b-4660-b361-090ece5d6539';
+        
+        // DOM元素
+        const chatArea = document.getElementById('chatArea');
+        const inputBox = document.getElementById('inputBox');
+        const sendBtn = document.getElementById('sendBtn');
+        
+        // 消息历史
+        let messages = [
+            {
+                role: 'system',
+                content: '你是一名专业的人生教练，拥有丰富的心理咨询和个人成长指导经验。你的任务是通过与用户的对话，了解他们的问题和困惑，提供专业、温暖、实用的建议，帮助他们成长和解决问题。你应该：1. 倾听用户的问题，表达理解和同理心；2. 分析问题的根本原因；3. 提供具体、可操作的建议；4. 鼓励用户积极面对挑战；5. 保持专业、尊重的态度。'
+            },
+            {
+                role: 'assistant',
+                content: '你好！我是你的AI人生教练。无论你面临什么问题或挑战，我都在这里为你提供支持和建议。请告诉我你现在的情况，我会尽力帮助你。'
+            }
+        ];
+        
+        // 发送消息函数
+        async function sendMessage() {
+            const userInput = inputBox.value.trim();
+            if (!userInput) return;
+            
+            // 添加用户消息到界面
+            addMessage('user', userInput);
+            
+            // 清空输入框
+            inputBox.value = '';
+            
+            // 禁用发送按钮
+            sendBtn.disabled = true;
+            sendBtn.innerHTML = '<div class="loading"></div>';
+            
+            // 添加用户消息到历史
+            messages.push({ role: 'user', content: userInput });
+            
+            try {
+                // 调用API
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${API_KEY}`
+                    },
+                    body: JSON.stringify({
+                        model: 'deepseek-r1-250528',
+                        messages: messages
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error('API调用失败');
+                }
+                
+                const data = await response.json();
+                const aiResponse = data.choices[0].message.content;
+                
+                // 添加AI回复到界面
+                addMessage('ai', aiResponse);
+                
+                // 添加AI回复到历史
+                messages.push({ role: 'assistant', content: aiResponse });
+                
+            } catch (error) {
+                console.error('错误:', error);
+                addMessage('ai', '抱歉，我暂时无法回答你的问题。请稍后再试。');
+            } finally {
+                // 启用发送按钮
+                sendBtn.disabled = false;
+                sendBtn.innerHTML = '发送';
+            }
+        }
+        
+        // 添加消息到界面
+        function addMessage(role, content) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${role === 'user' ? 'user-message' : 'ai-message'}`;
+            
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'message-content';
+            contentDiv.innerHTML = `<p>${content}</p>`;
+            
+            const timeDiv = document.createElement('div');
+            timeDiv.className = 'message-time';
+            timeDiv.textContent = new Date().toLocaleTimeString();
+            
+            messageDiv.appendChild(contentDiv);
+            messageDiv.appendChild(timeDiv);
+            chatArea.appendChild(messageDiv);
+            
+            // 滚动到底部
+            chatArea.scrollTop = chatArea.scrollHeight;
+        }
+        
+        // 事件监听器
+        sendBtn.addEventListener('click', sendMessage);
+        
+        inputBox.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+        
+        // 自动调整输入框高度
+        inputBox.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+        });
+    </script>
+</body>
+</html>
