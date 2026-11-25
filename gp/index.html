@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
+  <title>股智云 - 专业股票工具平台</title>
+  <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.prod.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            primary: '#0F3885',
+            rise: '#E63946',
+            fall: '#009E5F',
+            neutral: '#86909C',
+            darkbg: '#0E1428',
+            darkcard: '#1A233A'
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+  <style type="text/tailwindcss">
+    @layer utilities {
+      .content-auto { content-visibility: auto; }
+      .scrollbar-hide { scrollbar-width: none; }
+      .scrollbar-hide::-webkit-scrollbar { display: none; }
+      .stock-grid { @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3; }
+      .card-base { @apply bg-white dark:bg-darkcard rounded-lg shadow p-3 sm:p-4 transition-all; }
+      .btn-base { @apply px-3 py-1.5 text-sm rounded; }
+    }
+  </style>
+</head>
+<body class="bg-gray-50 dark:bg-darkbg text-gray-800 dark:text-gray-200 transition-colors min-h-screen">
+<div id="app">
+  <!-- 顶部导航 -->
+  <header class="sticky top-0 z-50 bg-primary text-white shadow-lg">
+    <div class="container mx-auto px-3">
+      <div class="flex items-center justify-between h-14 sm:h-16">
+        <div class="flex items-center gap-2 text-lg sm:text-xl font-bold">
+          <i class="fa fa-line-chart"></i> 股智云
+        </div>
+
+        <!-- 移动端菜单按钮 -->
+        <button @click="showMenu = !showMenu" class="block md:hidden text-2xl">
+          <i class="fa fa-bars"></i>
+        </button>
+
+        <!-- PC端导航 -->
+        <nav class="hidden md:flex space-x-4 lg:space-x-6">
+          <button v-for="item in navMenu" :key="item.id" 
+            @click="activeTab = item.key; showMenu=false"
+            :class="activeTab===item.key ? 'border-b-2 border-white font-semibold py-1' : 'text-gray-200 hover:text-white py-1'">
+            {{item.name}}
+          </button>
+        </nav>
+
+        <!-- 搜索 -->
+        <div class="hidden sm:block relative w-36 md:w-56 lg:w-64">
+          <input v-model="searchKey" placeholder="搜索股票代码/名称" 
+            class="w-full rounded px-3 py-1.5 text-sm text-gray-900 outline-none" />
+          <i class="fa fa-search absolute right-3 top-2 text-gray-500"></i>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <button @click="isDark = !isDark" class="text-white text-lg">
+            <i :class="isDark ? 'fa fa-sun-o' : 'fa fa-moon-o'"></i>
+          </button>
+          <button class="hidden sm:block px-3 py-1 rounded border border-white hover:bg-white/10 text-sm">登录</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- 移动端下拉菜单 -->
+  <div v-if="showMenu" class="md:hidden bg-primary/95 text-white absolute w-full z-40 shadow-lg">
+    <div class="px-3 py-2 space-y-2">
+      <button v-for="item in navMenu" :key="item.id"
+        @click="activeTab = item.key; showMenu=false"
+        class="block w-full text-left py-2 px-3 rounded hover:bg-white/10">
+        {{item.name}}
+      </button>
+      <div class="relative mt-2">
+        <input v-model="searchKey" placeholder="搜索股票" 
+          class="w-full rounded px-3 py-2 text-sm text-gray-900 outline-none" />
+        <i class="fa fa-search absolute right-3 top-3 text-gray-500"></i>
+      </div>
+    </div>
+  </div>
+
+  <main class="container mx-auto px-3 py-4 pb-20">
+    <!-- 大盘首页 -->
+    <div v-if="activeTab === 'index'">
+      <h2 class="text-base sm:text-lg font-bold mb-3">市场大盘总览</h2>
+      <div class="stock-grid mb-4">
+        <div v-for="idx in marketIndex" :key="idx.code" class="card-base">
+          <div class="flex justify-between items-start">
+            <div>
+              <div class="font-bold text-sm sm:text-base">{{idx.name}}</div>
+              <div class="text-neutral text-xs">{{idx.code}}</div>
+            </div>
+            <div class="text-right">
+              <div :class="idx.change>0 ? 'text-rise font-bold text-sm sm:text-base' : 'text-fall font-bold text-sm sm:text-base'">
+                {{idx.price}}
+              </div>
+              <div :class="idx.change>0 ? 'text-rise text-xs' : 'text-fall text-xs'">
+                {{idx.change}} {{idx.changePer}}%
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-3 gap-2 mb-4">
+        <div class="card-base text-center p-2">
+          <div class="text-neutral text-xs">上涨</div><div class="text-rise font-bold text-sm">2156</div>
+        </div>
+        <div class="card-base text-center p-2">
+          <div class="text-neutral text-xs">下跌</div><div class="text-fall font-bold text-sm">2892</div>
+        </div>
+        <div class="card-base text-center p-2">
+          <div class="text-neutral text-xs">涨停</div><div class="text-rise font-bold text-sm">58</div>
+        </div>
+        <div class="card-base text-center p-2">
+          <div class="text-neutral text-xs">跌停</div><div class="text-fall font-bold text-sm">12</div>
+        </div>
+        <div class="card-base text-center p-2">
+          <div class="text-neutral text-xs">北向</div><div class="text-rise font-bold text-sm">+42亿</div>
+        </div>
+        <div class="card-base text-center p-2">
+          <div class="text-neutral text-xs">成交额</div><div class="font-bold text-sm">8926亿</div>
+        </div>
+      </div>
+
+      <div class="card-base">
+        <h3 class="font-bold text-sm mb-2">热门板块</h3>
+        <div class="overflow-x-auto">
+          <table class="w-full text-xs">
+            <thead><tr class="text-neutral"><th class="text-left">板块</th><th class="text-right">涨幅</th><th class="text-right">领涨股</th></tr></thead>
+            <tbody>
+              <tr v-for="item in plateList" :key="item.name">
+                <td>{{item.name}}</td>
+                <td :class="item.per>0 ? 'text-rise' : 'text-fall'" class="text-right">{{item.per}}%</td>
+                <td class="text-right">{{item.lead}}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- 涨停榜 -->
+    <div v-if="activeTab === 'limitup'">
+      <h2 class="text-base sm:text-lg font-bold mb-3">涨停复盘榜单</h2>
+      <div class="flex gap-2 flex-wrap mb-3">
+        <button @click="limitTab='all'" :class="limitTab=='all'?'bg-primary text-white':'bg-gray-200 dark:bg-gray-700'" class="btn-base">全部涨停</button>
+        <button @click="limitTab='lian'" :class="limitTab=='lian'?'bg-primary text-white':'bg-gray-200 dark:bg-gray-700'" class="btn-base">连板妖股</button>
+        <button @click="limitTab='zushou'" :class="limitTab=='zushou'?'bg-primary text-white':'bg-gray-200 dark:bg-gray-700'" class="btn-base">炸板</button>
+        <button @click="limitTab='limitdown'" :class="limitTab=='limitdown'?'bg-primary text-white':'bg-gray-200 dark:bg-gray-700'" class="btn-base">跌停</button>
+      </div>
+      <div class="card-base overflow-x-auto">
+        <table class="w-full text-xs">
+          <thead><tr class="text-neutral"><th>代码</th><th>名称</th><th class="text-right">价</th><th class="text-right">涨幅</th><th>连板</th><th>题材</th></tr></thead>
+          <tbody>
+            <tr v-for="stock in limitUpList" :key="stock.code">
+              <td>{{stock.code}}</td>
+              <td>{{stock.name}}</td>
+              <td class="text-right text-rise">{{stock.price}}</td>
+              <td class="text-right text-rise">+{{stock.per}}%</td>
+              <td>{{stock.lian}}板</td>
+              <td class="whitespace-nowrap">{{stock.reason}}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 个股详情 -->
+    <div v-if="activeTab === 'stockDetail'">
+      <div v-if="!currentStock.code" class="text-center py-10 text-neutral text-sm">请搜索股票</div>
+      <div v-else>
+        <div class="mb-3 flex justify-between items-center">
+          <div>
+            <h2 class="text-base sm:text-lg font-bold">{{currentStock.name}} <span class="text-xs text-neutral">{{currentStock.code}}</span></h2>
+            <div class="flex items-center gap-3 mt-1">
+              <span :class="currentStock.change>0?'text-rise':'text-fall'" class="text-base font-bold">{{currentStock.price}}</span>
+              <span :class="currentStock.change>0?'text-rise':'text-fall'" class="text-xs">{{currentStock.changePer}}%</span>
+            </div>
+          </div>
+          <button @click="addSelf(currentStock)" class="px-3 py-1.5 bg-primary text-white rounded text-xs">加自选</button>
+        </div>
+        <div class="card-base mb-4 h-[260px] sm:h-[350px]">
+          <div class="flex gap-3 mb-2 text-sm"><button>分时</button><button>日K</button><button>周K</button><button>月K</button></div>
+          <canvas id="klineChart"></canvas>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div class="card-base p-2"><h3 class="text-sm font-bold mb-1">盘口</h3><div class="text-xs space-y-1"><div class="flex justify-between"><span>今开</span><span>42.35</span></div></div></div>
+          <div class="card-base p-2"><h3 class="text-sm font-bold mb-1">资金</h3><div class="text-xs space-y-1"><div class="flex justify-between"><span>主力净流入</span><span class="text-rise">+1.25亿</span></div></div></div>
+          <div class="card-base p-2"><h3 class="text-sm font-bold mb-1">财务</h3><div class="text-xs space-y-1"><div class="flex justify-between"><span>市盈率</span><span>28.6</span></div></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 条件选股 -->
+    <div v-if="activeTab === 'select'">
+      <h2 class="text-base sm:text-lg font-bold mb-3">条件选股</h2>
+      <div class="card-base mb-4">
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+          <div><label class="text-xs block mb-1">均线</label><select class="w-full p-2 rounded border text-sm"></select></div>
+          <div><label class="text-xs block mb-1">涨幅</label><div class="flex gap-1"><input placeholder="最低" class="w-1/2 p-1.5 text-sm rounded border"></div></div>
+        </div>
+        <button class="px-4 py-2 bg-primary text-white rounded text-sm">开始选股</button>
+      </div>
+      <div class="card-base overflow-x-auto text-xs">
+        <table class="w-full">
+          <thead><tr class="text-neutral"><th>代码</th><th>名称</th><th class="text-right">价格</th><th class="text-right">涨幅</th></tr></thead>
+          <tbody><tr><td>600522</td><td>中天科技</td><td class="text-right">32.36</td><td class="text-right text-rise">4.59%</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 诊股 -->
+    <div v-if="activeTab === 'diagnose'">
+      <h2 class="text-base sm:text-lg font-bold mb-3">智能诊股</h2>
+      <div class="card-base mb-4">
+        <div class="flex gap-2"><input placeholder="股票代码" class="flex-1 p-2 rounded border text-sm"><button class="px-4 py-2 bg-primary text-white rounded text-sm">诊股</button></div>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div class="card-base text-center p-4"><div class="text-4xl font-bold text-primary">76</div><div class="mt-2">良好</div></div>
+        <div class="card-base p-3 text-sm"><p><b>支撑位：</b>29.5</p><p><b>压力位：</b>36.8</p><p><b>建议：</b>回调低吸</p></div>
+      </div>
+    </div>
+
+    <!-- 自选预警 -->
+    <div v-if="activeTab === 'selfstock'">
+      <h2 class="text-base sm:text-lg font-bold mb-3">自选股 & 预警</h2>
+      <div class="flex gap-2 mb-3">
+        <button class="btn-base bg-primary text-white">自选列表</button>
+        <button class="btn-base bg-gray-200 dark:bg-gray-700">预警设置</button>
+      </div>
+      <div class="card-base overflow-x-auto text-xs">
+        <table class="w-full">
+          <thead><tr class="text-neutral"><th>代码</th><th>名称</th><th class="text-right">价格</th><th class="text-right">涨幅</th></tr></thead>
+          <tbody>
+            <tr v-for="s in selfList" :key="s.code">
+              <td>{{s.code}}</td><td>{{s.name}}</td>
+              <td :class="s.per>0?'text-rise':'text-fall'" class="text-right">{{s.price}}</td>
+              <td :class="s.per>0?'text-rise':'text-fall'" class="text-right">{{s.per}}%</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 论坛 -->
+    <div v-if="activeTab === 'forum'">
+      <h2 class="text-base sm:text-lg font-bold mb-3">股票论坛</h2>
+      <div class="card-base mb-4">
+        <textarea placeholder="发布观点..." class="w-full h-20 p-2 rounded border text-sm"></textarea>
+        <div class="mt-2 text-right"><button class="px-4 py-1.5 bg-primary text-white rounded text-sm">发布</button></div>
+      </div>
+      <div class="space-y-3">
+        <div v-for="post in forumList" :key="post.id" class="card-base p-3">
+          <div class="font-bold text-sm">{{post.title}}</div>
+          <div class="text-xs mt-1 text-neutral">{{post.time}}</div>
+          <div class="text-sm mt-2">{{post.content}}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 资讯 -->
+    <div v-if="activeTab === 'news'">
+      <h2 class="text-base sm:text-lg font-bold mb-3">财经资讯</h2>
+      <div class="space-y-3">
+        <div v-for="n in newsList" :key="n.id" class="card-base p-3">
+          <div class="text-sm font-bold">{{n.title}}</div>
+          <div class="text-xs text-neutral mt-1">{{n.time}} · {{n.source}}</div>
+          <div class="text-xs mt-2 line-clamp-2">{{n.desc}}</div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="bg-primary text-white py-4 mt-10 text-center text-xs">
+    股智云 © 2026 数据仅供参考
+  </footer>
+</div>
+
+<script>
+const { createApp } = Vue
+createApp({
+  data() {
+    return {
+      isDark: false,
+      activeTab: 'index',
+      showMenu: false,
+      searchKey: '',
+      navMenu: [
+        {id:1,key:'index',name:'大盘首页'},
+        {id:2,key:'limitup',name:'涨停榜单'},
+        {id:3,key:'stockDetail',name:'个股详情'},
+        {id:4,key:'select',name:'条件选股'},
+        {id:5,key:'diagnose',name:'智能诊股'},
+        {id:6,key:'selfstock',name:'自选预警'},
+        {id:7,key:'forum',name:'股票论坛'},
+        {id:8,key:'news',name:'财经资讯'},
+      ],
+      marketIndex: [
+        {name:'上证指数',code:'000001',price:'3186.52',change:'+28.36',changePer:'0.90'},
+        {name:'深证成指',code:'399001',price:'10352.18',change:'+152.63',changePer:'1.49'},
+        {name:'创业板指',code:'399006',price:'2086.45',change:'+38.25',changePer:'1.87'},
+      ],
+      plateList: [
+        {name:'AI算力',per:3.86,lead:'中科曙光'},
+        {name:'光模块',per:3.21,lead:'中际旭创'},
+        {name:'半导体',per:2.15,lead:'中芯国际'},
+      ],
+      limitTab:'all',
+      limitUpList: [
+        {code:'600522',name:'中天科技',price:'32.36',per:4.59,lian:3,reason:'光通信+海缆'},
+        {code:'300756',name:'金马游乐',price:'53.67',per:2.56,lian:2,reason:'AI机器人'},
+      ],
+      currentStock: {code:'600522',name:'中天科技',price:'32.36',change:'+1.42',changePer:'4.59'},
+      selfList: [
+        {code:'603757',name:'大元泵业',price:'54.66',per:-6.72},
+        {code:'600522',name:'中天科技',price:'32.36',per:4.59},
+      ],
+      forumList: [
+        {id:1,title:'中天科技分析',content:'光通信景气度高，趋势向好',time:'2小时前'},
+      ],
+      newsList: [
+        {id:1,title:'A股放量上涨，算力板块领涨',desc:'三大指数全线走高，资金流入明显',time:'10分钟前',source:'东方财富'},
+      ]
+    }
+  },
+  methods: {
+    addSelf(){}
+  },
+  mounted() {
+    this.$watch('isDark',val=>{
+      val?document.documentElement.classList.add('dark'):document.documentElement.classList.remove('dark')
+    })
+  }
+}).mount('#app')
+</script>
+</body>
+</html>
